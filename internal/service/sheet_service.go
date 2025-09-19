@@ -24,27 +24,6 @@ func NewSheetService(cfg config.Config) *SheetService {
 	return &SheetService{svc, cfg.SpreadsheetId}
 }
 
-func (s *SheetService) AppendRows(sheetName string, rows []dto.Row) error {
-	if len(rows) < 1 {
-		return eris.New("no rows to append")
-	}
-
-	values := s.rowsToValues(rows)
-	values = values[1:] // ignore header
-
-	valueRange := &sheets.ValueRange{Values: values}
-
-	_, err := s.svc.Spreadsheets.Values.
-		Append(s.spreadsheetID, sheetName, valueRange).
-		ValueInputOption("RAW").
-		Do()
-	if err != nil {
-		return eris.Wrap(err, "error appending to spreadsheet")
-	}
-
-	return nil
-}
-
 // ReplaceSheet clears an entire sheet and writes header+rows.
 func (s *SheetService) ReplaceSheet(ctx context.Context, sheetName string, rows []dto.Row) error {
 	if len(rows) < 1 {
