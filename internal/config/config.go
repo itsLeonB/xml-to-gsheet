@@ -3,10 +3,11 @@ package config
 import "github.com/kelseyhightower/envconfig"
 
 type Config struct {
-	Url                  string `required:"true"`
-	GoogleServiceAccount string `split_words:"true" required:"true"`
-	SpreadsheetId        string `split_words:"true" required:"true"`
-	SheetName            string `split_words:"true" default:"Sheet1"`
+	Url                    string `required:"true"`
+	GoogleServiceAccount   string `split_words:"true" required:"true"`
+	SpreadsheetId          string `split_words:"true" required:"true"`
+	SheetName              string `split_words:"true" default:"Sheet1"`
+	PlaceholderDescription string `split_words:"true"`
 }
 
 func Load() Config {

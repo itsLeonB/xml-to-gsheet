@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/itsLeonB/ezutil/v2"
@@ -34,13 +35,18 @@ func main() {
 
 	logger.Infof("obtained xml entries: %d", len(feed.Entries))
 
-	rows := ezutil.MapSlice(feed.Entries, mapper.EntryToRow)
+	logger.Infof("using placeholder description: %s", cfg.PlaceholderDescription)
+	placeholders := dto.Entry{
+		Description: cfg.PlaceholderDescription,
+	}
 
-	logger.Info("start appending rows to sheet...")
+	rows := ezutil.MapSlice(feed.Entries, mapper.GetSimpleMapper(placeholders))
+
+	logger.Info("start updating rows to sheet...")
 
 	sheetService := service.NewSheetService(cfg)
 
-	if err = sheetService.AppendRows(cfg.SheetName, rows); err != nil {
+	if err = sheetService.ReplaceSheet(context.Background(), cfg.SheetName, rows); err != nil {
 		logger.Fatalf(eris.ToString(err, true))
 	}
 
