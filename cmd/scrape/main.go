@@ -26,15 +26,18 @@ func main() {
 		return
 	}
 
-	if err := scrapeUniqueTags(resp.Body); err != nil {
+	if err := classifyTags(resp.Body); err != nil {
 		fmt.Println("error:", err)
 	}
 }
 
-func scrapeUniqueTags(r io.Reader) error {
+func classifyTags(r io.Reader) error {
 	dec := xml.NewDecoder(r)
 
-	seen := make(map[string]struct{})
+	inEntry := false
+	entryCounts := make(map[string]int)
+	// track maximum count we ever saw for each tag in any single entry
+	maxPerEntry := make(map[string]int)
 
 	for {
 		tok, err := dec.Token()
@@ -44,23 +47,62 @@ func scrapeUniqueTags(r io.Reader) error {
 		if err != nil {
 			return err
 		}
+
 		switch se := tok.(type) {
 		case xml.StartElement:
 			name := se.Name.Local
-			// include namespace if present
 			if se.Name.Space != "" {
 				name = se.Name.Space + ":" + se.Name.Local
 			}
-			if _, ok := seen[name]; !ok {
-				seen[name] = struct{}{}
+
+			if se.Name.Local == "entry" && se.Name.Space == "http://www.w3.org/2005/Atom" {
+				// new entry
+				inEntry = true
+				entryCounts = make(map[string]int)
+				continue
+			}
+
+			if inEntry {
+				entryCounts[name]++
+				if entryCounts[name] > maxPerEntry[name] {
+					maxPerEntry[name] = entryCounts[name]
+				}
+			}
+
+		case xml.EndElement:
+			if se.Name.Local == "entry" && se.Name.Space == "http://www.w3.org/2005/Atom" {
+				inEntry = false
 			}
 		}
 	}
 
-	// print the unique tag names
-	fmt.Println("Unique tags found:")
-	for n := range seen {
-		fmt.Println(" -", n)
+	// classify tags
+	var uniqueTags []string
+	var singleValue []string
+	var multiValue []string
+	for tag, max := range maxPerEntry {
+		uniqueTags = append(uniqueTags, tag)
+		if max > 1 {
+			multiValue = append(multiValue, tag)
+		} else {
+			singleValue = append(singleValue, tag)
+		}
 	}
+
+	fmt.Println("=== All unique tags ===")
+	for _, t := range uniqueTags {
+		fmt.Println(" -", t)
+	}
+
+	fmt.Println("\n=== Tags with single value per entry (scalar fields) ===")
+	for _, t := range singleValue {
+		fmt.Println(" -", t)
+	}
+
+	fmt.Println("\n=== Tags with multiple values per entry (should be slices) ===")
+	for _, t := range multiValue {
+		fmt.Println(" -", t)
+	}
+
 	return nil
 }

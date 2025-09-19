@@ -1,47 +1,48 @@
 package main
 
 import (
-	"encoding/xml"
-	"fmt"
-	"io"
-	"net/http"
+	"time"
 
+	"github.com/itsLeonB/ezutil/v2"
 	"github.com/itsLeonB/xml-to-gsheet/internal/config"
 	"github.com/itsLeonB/xml-to-gsheet/internal/dto"
+	"github.com/itsLeonB/xml-to-gsheet/internal/mapper"
+	"github.com/itsLeonB/xml-to-gsheet/internal/service"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/rotisserie/eris"
 )
 
 func main() {
+	startTime := time.Now()
+	logger := ezutil.NewSimpleLogger("XML-to-GSheet", true, 1)
+	logger.Info("starting cronjob...")
+
 	cfg := config.Load()
 	url := cfg.Url
 
-	resp, err := http.Get(url)
+	logger.Infof("using spreadsheet ID: %s", cfg.SpreadsheetId)
+	logger.Infof("using sheet name: %s", cfg.SheetName)
+
+	scraper := service.NewScraperService[dto.Feed]()
+
+	logger.Info("scraping url...")
+
+	feed, err := scraper.ScrapeXML(url)
 	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		panic(fmt.Sprintf("bad status: %s", resp.Status))
+		logger.Fatalf(eris.ToString(err, true))
 	}
 
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
+	logger.Infof("obtained xml entries: %d", len(feed.Entries))
+
+	rows := ezutil.MapSlice(feed.Entries, mapper.EntryToRow)
+
+	logger.Info("start appending rows to sheet...")
+
+	sheetService := service.NewSheetService(cfg)
+
+	if err = sheetService.AppendRows(cfg.SheetName, rows); err != nil {
+		logger.Fatalf(eris.ToString(err, true))
 	}
 
-	var feed dto.Feed
-	if err := xml.Unmarshal(data, &feed); err != nil {
-		panic(err)
-	}
-
-	fmt.Println("Feed:", feed.Title, "updated:", feed.Updated)
-	for _, e := range feed.Entries {
-		fmt.Printf("\nTitle: %s\nPrice: %s\nSale Price: %s\nLink: %s\n", e.Title, e.Price, e.SalePrice, e.Link)
-		fmt.Println("Shipping options:")
-		for _, s := range e.Shipping {
-			fmt.Printf(" - %s: %s (%s)\n", s.Service, s.Price, s.Country)
-		}
-		fmt.Println("Additional images:", e.AdditionalImageLinks)
-	}
+	logger.Infof("finished job, elapsed time: %d miliseconds", time.Since(startTime).Milliseconds())
 }
