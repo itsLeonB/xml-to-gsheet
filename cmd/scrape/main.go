@@ -19,7 +19,11 @@ func main() {
 		fmt.Println("error:", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Println("error closing body:", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		fmt.Println("bad status:", resp.Status)

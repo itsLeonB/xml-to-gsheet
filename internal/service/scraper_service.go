@@ -5,14 +5,16 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/itsLeonB/ezutil/v2"
 	"github.com/rotisserie/eris"
 )
 
 type ScraperService[T any] struct {
+	logger ezutil.Logger
 }
 
-func NewScraperService[T any]() *ScraperService[T] {
-	return &ScraperService[T]{}
+func NewScraperService[T any](logger ezutil.Logger) *ScraperService[T] {
+	return &ScraperService[T]{logger}
 }
 
 func (ss *ScraperService[T]) ScrapeXML(url string) (T, error) {
@@ -22,7 +24,11 @@ func (ss *ScraperService[T]) ScrapeXML(url string) (T, error) {
 	if err != nil {
 		return zero, eris.Wrap(err, "error get request")
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			ss.logger.Error(eris.ToString(eris.Wrap(err, "error closing body"), true))
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return zero, eris.Errorf("response not OK: %d", resp.StatusCode)

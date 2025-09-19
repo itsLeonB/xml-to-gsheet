@@ -24,7 +24,7 @@ func main() {
 	logger.Infof("using spreadsheet ID: %s", cfg.SpreadsheetId)
 	logger.Infof("using sheet name: %s", cfg.SheetName)
 
-	scraper := service.NewScraperService[dto.Feed]()
+	scraper := service.NewScraperService[dto.Feed](logger)
 
 	logger.Info("scraping url...")
 
