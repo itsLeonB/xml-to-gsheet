@@ -14,6 +14,8 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
+
 	startTime := time.Now()
 	logger := ezutil.NewSimpleLogger("XML-to-GSheet", true, 1)
 	logger.Info("starting cronjob...")
@@ -46,7 +48,7 @@ func main() {
 
 	sheetService := service.NewSheetService(cfg)
 
-	if err = sheetService.ReplaceSheet(context.Background(), cfg.SheetName, rows); err != nil {
+	if err = sheetService.ReplaceSheet(ctx, cfg.SheetName, rows); err != nil {
 		logger.Fatalf(eris.ToString(err, true))
 	}
 

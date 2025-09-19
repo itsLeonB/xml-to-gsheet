@@ -30,6 +30,7 @@ func (s *SheetService) AppendRows(sheetName string, rows []dto.Row) error {
 	}
 
 	values := s.rowsToValues(rows)
+	values = values[1:] // ignore header
 
 	valueRange := &sheets.ValueRange{Values: values}
 
@@ -46,6 +47,10 @@ func (s *SheetService) AppendRows(sheetName string, rows []dto.Row) error {
 
 // ReplaceSheet clears an entire sheet and writes header+rows.
 func (s *SheetService) ReplaceSheet(ctx context.Context, sheetName string, rows []dto.Row) error {
+	if len(rows) < 1 {
+		return eris.New("empty rows")
+	}
+
 	// Step 1: clear the sheet
 	clearReq := &sheets.ClearValuesRequest{}
 	_, err := s.svc.Spreadsheets.Values.Clear(s.spreadsheetID, sheetName, clearReq).Context(ctx).Do()
