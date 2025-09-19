@@ -14,7 +14,7 @@ func main() {
 	cfg := config.Load()
 	url := cfg.Url
 
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) // #nosec G107
 	if err != nil {
 		fmt.Println("error:", err)
 		return

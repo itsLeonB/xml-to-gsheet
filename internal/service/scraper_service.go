@@ -20,7 +20,7 @@ func NewScraperService[T any](logger ezutil.Logger) *ScraperService[T] {
 func (ss *ScraperService[T]) ScrapeXML(url string) (T, error) {
 	var zero T
 
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) // #nosec G107
 	if err != nil {
 		return zero, eris.Wrap(err, "error get request")
 	}
